@@ -1,0 +1,6 @@
+{
+  "name": "ECOCHAIN 3D — Petualangan Rantai Makanan",
+  "description": "Media pembelajaran 3D interaktif tentang rantai makanan, aliran energi ekosistem padang rumput, simulasi trofik, dan eksperimen dinamika populasi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

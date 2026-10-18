@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulasi 3D Gunung Berapi & Aktivitas Vulkanik</title>
+  <meta name="description" content="Simulasi visual 3D interaktif anatomi gunung berapi, tanda-tanda peningkatan aktivitas vulkanik, seismograf, dan perilaku hewan saat erupsi.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Three.js & Loaders (CDN Standalone) -->
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://unpkg.com/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
+</head>
+<body>
+
+  <!-- Container Canvas 3D WebGL -->
+  <div id="canvas-container"></div>
+
+  <!-- Notification Toast -->
+  <div id="toast">Notifikasi Sistem</div>
+
+  <!-- UI Overlay -->
+  <div id="ui-overlay">
+    
+    <!-- Header Atas -->
+    <header class="top-header glass-panel interactive">
+      <div class="header-brand">
+        <h1>🌋 VOLCANO 3D</h1>
+        <div class="subtitle">Simulasi Interaktif Anatomi & Tanda Aktivitas Vulkanik</div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Status Indikator Simulasi -->
+        <div id="status-badge" class="status-badge">
+          <span class="status-dot"></span>
+          <span id="status-text">AKTIVITAS NORMAL (LEVEL I)</span>
+        </div>
+
+        <!-- Tombol Audio -->
+        <button id="btn-sound" class="btn-state interactive" style="padding: 6px 12px; font-size: 11px;">
+          🔊 SOUND
+        </button>
+
+        <!-- Reset Kamera -->
+        <button id="btn-reset-cam" class="btn-icon" title="Reset Kamera">
+          🔄
+        </button>
+      </div>
+    </header>
+
+    <!-- Zona Utama (Sidebar Kiri: Indikator & Mode Penampang; Sidebar Kanan: Inspector Edukasi) -->
+    <main class="main-content-zone">
+      
+      <!-- Sidebar Kiri -->
+      <aside class="left-sidebar">
+        
+        <!-- Mode Penampang (Cutaway) -->
+        <div class="glass-panel" style="padding: 12px;">
+          <div class="section-title">Mode Tampilan 3D</div>
+          <div class="toggle-group">
+            <button id="mode-full" class="toggle-btn active">Mode Normal</button>
+            <button id="mode-cutaway" class="toggle-btn">Mode Penampang</button>
+          </div>
+        </div>
+
+        <!-- 7 Parameter Tanda Aktivitas Vulkanik -->
+        <div class="glass-panel" style="padding: 14px;">
+          <div class="section-title">Tanda Peningkatan Aktivitas</div>
+          <div class="indicators-list">
+            <div class="indicator-item" data-type="gempa">
+              <span>📈 1. Gempa Vulkanik</span>
+              <span class="tag">Tremor</span>
+            </div>
+            <div class="indicator-item" data-type="suhu">
+              <span>🌡️ 2. Peningkatan Suhu</span>
+              <span class="tag">Termal</span>
+            </div>
+            <div class="indicator-item" data-type="gas">
+              <span>💨 3. Gas & Asap Kawah</span>
+              <span class="tag">SO₂/CO₂</span>
+            </div>
+            <div class="indicator-item" data-type="air">
+              <span>💧 4. Perubahan Air</span>
+              <span class="tag">Mata Air</span>
+            </div>
+            <div class="indicator-item" data-type="hewan">
+              <span>🦌 5. Perilaku Hewan</span>
+              <span class="tag">Migrasi</span>
+            </div>
+            <div class="indicator-item" data-type="deformasi">
+              <span>📐 6. Deformasi Gunung</span>
+              <span class="tag">Tiltmeter</span>
+            </div>
+            <div class="indicator-item" data-type="lava">
+              <span>🔥 7. Aktivitas Lava</span>
+              <span class="tag">Kubah</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Widget Live Seismograf -->
+        <div class="glass-panel seismograph-widget">
+          <div class="section-title" style="display: flex; justify-content: space-between;">
+            <span>Seismograf Vulkanik</span>
+            <span style="color: #22c55e;">LIVE DATA</span>
+          </div>
+          <canvas id="seismo-canvas" class="seismo-canvas" width="250" height="70"></canvas>
+          <div class="seismo-footer">
+            <span>Stasiun PVMBG Lereng</span>
+            <span>Freq: 1.5 - 4.0 Hz</span>
+          </div>
+        </div>
+
+      </aside>
+
+      <!-- Sidebar Kanan: Panel Info Edukasi Detail -->
+      <aside class="right-sidebar">
+        <div id="info-panel" class="glass-panel info-card" style="display: block;">
+          <div class="card-header">
+            <h3 id="info-title">🌋 Kawah (Crater)</h3>
+            <button class="btn-close" onclick="hideInfo()">✕</button>
+          </div>
+          <div class="card-body">
+            <p id="info-desc">
+              Bagian terbuka di puncak gunung tempat material vulkanik seperti gas magma, piroklastik, abu, dan lava pijar dapat keluar. Klik indikator di sebelah kiri atau klik langsung pin 3D di gunung untuk membedah bagian lainnya.
+            </p>
+            <div id="info-callout" class="data-callout">
+              <span class="bold">Simulasi Parameter:</span> Pengawasan visual 24 jam dengan thermal imaging dan gas sniffing drone.
+            </div>
+          </div>
+        </div>
+      </aside>
+
+    </main>
+
+    <!-- Dock Kontrol Bawah: Timeline & Tombol Simulasi -->
+    <footer class="bottom-dock">
+      
+      <!-- Progress Bar Erupsi Bertahap -->
+      <div class="simulation-timeline-bar">
+        <div id="timeline-progress" class="timeline-fill"></div>
+      </div>
+
+      <!-- Tombol Status & Aksi -->
+      <div class="controls-row glass-panel interactive">
+        <button id="btn-normal" class="btn-state active">
+          ● NORMAL
+        </button>
+        <button id="btn-warning" class="btn-state">
+          ▲ AKTIVITAS MENINGKAT
+        </button>
+        <button id="btn-erupt" class="btn-state btn-erupt">
+          🌋 MULAI ERUPSI
+        </button>
+        <button id="btn-reset" class="btn-state btn-reset">
+          ↺ RESET
+        </button>
+      </div>
+
+      <!-- Disclaimer Edukatif Wajib -->
+      <div class="disclaimer-bar">
+        <strong>Peringatan Edukasi:</strong> Visualisasi ini dibuat untuk tujuan pembelajaran akademis. Status aktivitas gunung api nyata ditentukan berdasarkan pemantauan dan analisis data oleh lembaga/otoritas terkait (seperti PVMBG/ESDM). Perilaku hewan atau satu gejala lingkungan saja tidak dapat dijadikan dasar tunggal untuk memprediksi erupsi.
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Script Logika Simulasi -->
+  <script src="script.js"></script>
+</body>
+</html>

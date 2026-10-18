@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VOLCANO 3D — Mengenal Tanda-Tanda Aktivitas Gunung Api</title>
+  <meta name="description" content="Media simulasi 3D interaktif anatomi gunung berapi, tanda-tanda peningkatan aktivitas vulkanik, seismograf, dan respon perilaku hewan saat erupsi. Proyek akademik WebGL Three.js.">
+  
+  <!-- Fonts Google -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Three.js & Loaders (CDN Standalone) -->
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://unpkg.com/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
+</head>
+<body>
+
+  <!-- ============================================================
+       F. LANDING / INTRO SCREEN (Section F)
+       ============================================================ -->
+  <div id="intro-screen" class="intro-overlay">
+    <div class="intro-card glass-panel">
+      <div class="intro-badge">
+        <span class="pulse-dot"></span>
+        <span>PROYEK AKADEMIK • WEBGL THREE.JS</span>
+      </div>
+      <h1 class="intro-title">VOLCANO 3D</h1>
+      <h2 class="intro-subtitle">Jelajahi Struktur dan Aktivitas Gunung Api</h2>
+      <p class="intro-desc">
+        Pelajari bagian dalam gunung berapi, kenali perubahan aktivitas vulkanik, dan amati simulasi perubahan lingkungan saat terjadi erupsi melalui visualisasi 3D interaktif.
+      </p>
+
+      <div class="intro-features">
+        <div class="feature-tag">🌋 Anatomi Penampang 3D</div>
+        <div class="feature-tag">📈 Simulasi Seismograf Real-Time</div>
+        <div class="feature-tag">🦌 Respon Satwa Liar Dinamis</div>
+        <div class="feature-tag">⚡ Finite State Machine</div>
+      </div>
+
+      <button id="btn-start-exploration" class="btn-primary-action">
+        <span>🚀 MULAI EKSPLORASI</span>
+      </button>
+
+      <div class="intro-note">
+        Klik tombol di atas untuk membuka simulator 3D dan mengaktifkan WebGL audio engine.
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       G. LOADING SCREEN (Section G)
+       ============================================================ -->
+  <div id="loading-screen" class="loading-overlay" style="display: none;">
+    <div class="loading-box glass-panel">
+      <div class="spinner-volcano">🌋</div>
+      <div class="loading-title">MEMUAT LINGKUNGAN 3D...</div>
+      <div class="loading-progress-bar">
+        <div id="loading-progress-fill" class="loading-progress-fill" style="width: 75%;"></div>
+      </div>
+      <div id="loading-status-text" class="loading-status-text">Menyusun lereng stratovolcano dan partikel lava... 75%</div>
+      <div id="loading-fallback-msg" class="loading-fallback-msg" style="display: none;">
+        Model gunung tidak ditemukan. Pastikan <code>gunung-api.glb</code> berada di folder <code>models/</code>.<br>
+        Mengaktifkan simulasi 3D prosedural Three.js...
+      </div>
+    </div>
+  </div>
+
+  <!-- Container Canvas 3D WebGL (Section H) -->
+  <div id="canvas-container"></div>
+
+  <!-- Notification Toast -->
+  <div id="toast">Notifikasi Sistem</div>
+
+  <!-- ============================================================
+       AT. UI HEADER (Section AT & BJ)
+       ============================================================ -->
+  <header class="top-header glass-panel">
+    <div class="header-brand">
+      <div class="brand-logo">🌋</div>
+      <div>
+        <h1 class="brand-title">VOLCANO 3D</h1>
+        <div class="brand-subtitle">Interactive Volcano Education</div>
+      </div>
+    </div>
+
+    <!-- Navigasi Menu Header (Scroll to Section) -->
+    <nav class="header-nav">
+      <a href="#section-explore" class="nav-link active">Eksplorasi</a>
+      <a href="#section-structure" class="nav-link">Struktur</a>
+      <a href="#section-activity" class="nav-link">Aktivitas</a>
+      <a href="#section-ecosystem" class="nav-link">Ekosistem</a>
+      <a href="#section-simulation" class="nav-link">Simulasi</a>
+      <a href="#section-mitigation" class="nav-link">Mitigasi</a>
+    </nav>
+
+    <!-- Aksi Cepat Header -->
+    <div class="header-actions">
+      <!-- Presentation Mode Toggle (Section BJ) -->
+      <button id="btn-presentation-mode" class="btn-header-tool" title="Mode Presentasi Layar Penuh">
+        <span>🖥️ Presentasi</span>
+      </button>
+
+      <!-- Audio Mute/Unmute (Section AR) -->
+      <button id="btn-sound" class="btn-header-tool" title="Suara Lingkungan (Web Audio API)">
+        <span id="sound-icon">🔊</span>
+        <span id="sound-label">SOUND</span>
+      </button>
+
+      <!-- Reset Kamera (Section I) -->
+      <button id="btn-reset-cam" class="btn-header-tool" title="Reset Posisi Kamera">
+        <span>🔄 Reset Kamera</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       3D OVERLAY HUD (FLOATING PANELS)
+       ============================================================ -->
+  <div id="ui-overlay" class="hud-layer">
+    
+    <!-- Kiri Atas: Preset Kamera & Mode Tampilan Penampang -->
+    <div class="hud-top-left glass-panel">
+      <div class="hud-panel-title">KAMERA & TAMPILAN</div>
+      <div class="hud-btn-group">
+        <button id="preset-overview" class="preset-btn active">Overview</button>
+        <button id="preset-crater" class="preset-btn">Kawah</button>
+        <button id="preset-cross" class="preset-btn">Penampang</button>
+        <button id="preset-wildlife" class="preset-btn">Satwa</button>
+      </div>
+
+      <!-- Slider Mode Penampang / Cutaway (Section T) -->
+      <div class="cutaway-slider-box">
+        <div class="slider-labels">
+          <span>Permukaan Luar</span>
+          <span class="bold text-amber">Dapur Magma</span>
+        </div>
+        <input type="range" id="cutaway-slider" min="0" max="100" value="0" class="custom-range">
+        <div class="slider-caption">Geser untuk membelah anatomi dalam gunung</div>
+      </div>
+    </div>
+
+    <!-- Kanan Atas: Floating Simulation Control (Section AU & AG) -->
+    <div class="hud-top-right glass-panel">
+      <div class="hud-panel-title">STATUS GUNUNG API</div>
+      
+      <!-- Status Badge -->
+      <div id="status-badge" class="status-badge-lg status-normal">
+        <span class="status-indicator-dot"></span>
+        <span id="status-text">● NORMAL</span>
+      </div>
+
+      <!-- Tombol Aksi Simulasi (Section AH) -->
+      <div class="sim-action-grid">
+        <button id="btn-normal" class="sim-btn active">
+          <span>NORMAL</span>
+        </button>
+        <button id="btn-warning" class="sim-btn">
+          <span>⚠ AKTIVITAS MENINGKAT</span>
+        </button>
+        <button id="btn-erupt" class="sim-btn sim-btn-erupt">
+          <span>🌋 MULAI ERUPSI</span>
+        </button>
+        <button id="btn-auto-demo" class="sim-btn sim-btn-demo" title="Jalankan Siklus Demonstrasi Otomatis">
+          <span>▶ AUTO DEMO</span>
+        </button>
+        <button id="btn-reset" class="sim-btn sim-btn-reset">
+          <span>↻ RESET</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Kiri Bawah: Indikator Tanda-Tanda Aktivitas (Section AA-AF) -->
+    <div class="hud-bottom-left glass-panel">
+      <div class="hud-panel-title">TANDA AKTIVITAS VULKANIK</div>
+      
+      <div class="activity-meters-row">
+        <!-- 1. Seismograph (Section AB) -->
+        <div class="meter-card">
+          <div class="meter-header">
+            <span>SEISMOGRAF</span>
+            <span id="seismo-tag" class="meter-tag green">NORMAL</span>
+          </div>
+          <canvas id="seismo-canvas" width="180" height="42"></canvas>
+          <div class="meter-sub">DATA ILUSTRASI — BUKAN REAL-TIME</div>
+        </div>
+
+        <!-- 2. Thermometer (Section AC) -->
+        <div class="meter-card">
+          <div class="meter-header">
+            <span>SUHU KAWAH</span>
+            <span id="temp-tag" class="meter-tag">LOW</span>
+          </div>
+          <div class="thermo-track">
+            <div id="thermo-fill" class="thermo-fill" style="width: 25%;"></div>
+          </div>
+          <div id="temp-val" class="meter-val">~75°C (Stabil)</div>
+        </div>
+
+        <!-- 3. Gas Vulkanik (Section AD) -->
+        <div class="meter-card">
+          <div class="meter-header">
+            <span>GAS EMISI SO₂</span>
+            <span id="gas-tag" class="meter-tag">LOW</span>
+          </div>
+          <div class="thermo-track">
+            <div id="gas-fill" class="thermo-fill" style="width: 20%; background: #38bdf8;"></div>
+          </div>
+          <div id="gas-val" class="meter-val">80 ton/hari (Aman)</div>
+        </div>
+
+        <!-- 4. Deformasi (Section AF) -->
+        <div class="meter-card">
+          <div class="meter-header">
+            <span>DEFORMASI</span>
+            <span id="tilt-tag" class="meter-tag">0 µrad</span>
+          </div>
+          <div class="deform-visual">
+            <span id="deform-arrow">➔</span>
+            <span id="deform-label">Kondisi Stabil</span>
+          </div>
+          <div class="meter-sub">Tiltmeter Geodetik</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kanan Bawah / Pop-up Inspector (Section U-Z) -->
+    <div id="info-panel" class="hud-inspector glass-panel" style="display: none;">
+      <div class="inspector-header">
+        <div class="inspector-title-wrap">
+          <span class="inspector-tag" id="inspector-tag">STRUKTUR 3D</span>
+          <h3 id="info-title" class="inspector-title">🌋 Kawah</h3>
+        </div>
+        <button class="btn-close" onclick="hideInfo()" title="Tutup Panel">✕</button>
+      </div>
+      <div class="inspector-body">
+        <p id="info-desc" class="inspector-text">
+          Kawah merupakan bagian terbuka di sekitar puncak gunung api yang menjadi salah satu tempat keluarnya material vulkanik.
+        </p>
+        <div id="info-callout" class="inspector-callout">
+          <strong>Fakta Sains:</strong> Kawah terbentuk akibat letusan eksplosif yang melontarkan batuan penutup kubah magma.
+        </div>
+        <div class="inspector-actions">
+          <button id="btn-focus-object" class="btn-action-sm">🔍 Dekati Objek</button>
+          <button onclick="hideInfo()" class="btn-action-sm btn-ghost">Tutup</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============================================================
+       SECTIONS KONTEN EDUKASI LENGKAP (Section AX - BN)
+       ============================================================ -->
+  <main class="educational-content-container">
+
+    <!-- 01 — Eksplorasi Gunung -->
+    <section id="section-explore" class="content-section">
+      <div class="section-number">01</div>
+      <h2 class="section-heading">Eksplorasi Gunung Berapi 3D</h2>
+      <p class="section-lead">
+        Selamat datang di media simulasi digital gunung berapi. Model 3D ini memungkinkan Anda membedah struktur internal bumi, memahami dinamika magma, serta mengamati perilaku satwa liar lereng saat gunung mengalami peningkatan aktivitas vulkanik.
+      </p>
+
+      <div class="guide-grid">
+        <div class="guide-card glass-panel">
+          <div class="guide-icon">🖱️</div>
+          <h3>Navigasi Rotasi & Zoom</h3>
+          <p>Klik kiri dan seret mouse untuk memutar sudut pandang. Gunakan scroll mouse untuk zoom mendekat ke kawah atau menjauh ke lembah.</p>
+        </div>
+        <div class="guide-card glass-panel">
+          <div class="guide-icon">🔬</div>
+          <h3>Mode Penampang (X-Ray)</h3>
+          <p>Gunakan slider penampang di pojok kiri atas untuk membelah tubuh gunung dan melihat saluran magma serta kantong magma aktif.</p>
+        </div>
+        <div class="guide-card glass-panel">
+          <div class="guide-icon">🎯</div>
+          <h3>Raycasting Objek</h3>
+          <p>Klik pin bundar atau bagian tubuh gunung secara langsung untuk membuka kartu fakta sains geologi dan vulkanologi.</p>
+        </div>
+        <div class="guide-card glass-panel">
+          <div class="guide-icon">🌋</div>
+          <h3>Skenario Letusan</h3>
+          <p>Pilih tingkat aktivitas dari Normal, Aktivitas Meningkat (Warning), hingga Erupsi Penuh untuk melihat respon lingkungan secara real-time.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 02 — Struktur Gunung Api (Section AY) -->
+    <section id="section-structure" class="content-section">
+      <div class="section-number">02</div>
+      <h2 class="section-heading">Struktur & Anatomi Gunung Api</h2>
+      <p class="section-lead">
+        Gunung berapi tipe stratovolcano tersusun atas beberapa komponen geologis utama yang saling berhubungan:
+      </p>
+
+      <div class="structure-diagram-grid">
+        <div class="structure-card glass-panel" onclick="selectMarkerById('crater')">
+          <div class="structure-badge">PUNCAK</div>
+          <h3>1. Kawah (Crater)</h3>
+          <p>Bagian cekungan terbuka di puncak gunung api yang menjadi muara tempat gas vulkanik, abu, bom batuan, dan lelehan lava keluar ke atmosfer.</p>
+        </div>
+
+        <div class="structure-card glass-panel" onclick="selectMarkerById('vent')">
+          <div class="structure-badge">SALURAN</div>
+          <h3>2. Vent / Saluran Magma</h3>
+          <p>Pipa atau rekahan utama di dalam kerak bumi yang menjadi jalur naiknya magma cair dari dapur magma menuju permukaan bumi.</p>
+        </div>
+
+        <div class="structure-card glass-panel" onclick="selectMarkerById('chamber')">
+          <div class="structure-badge">RESERVOIR</div>
+          <h3>3. Kamar Magma (Magma Chamber)</h3>
+          <p>Kolam raksasa batuan cair bersuhu tinggi di bawah kerak bumi. Di tempat ini tekanan gas dan magma terakumulasi sebelum memicu erupsi.</p>
+        </div>
+
+        <div class="structure-card glass-panel" onclick="selectMarkerById('lava')">
+          <div class="structure-badge">PERMUKAAN</div>
+          <h3>4. Aliran Lava (Lava Flow)</h3>
+          <p>Magma yang telah keluar mencapai permukaan bumi. Mengalir menuruni lereng dengan suhu berkisar antara 700°C hingga 1.200°C.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03 — Tanda-Tanda Aktivitas (Section AA) -->
+    <section id="section-activity" class="content-section">
+      <div class="section-number">03</div>
+      <h2 class="section-heading">Tanda-Tanda Peningkatan Aktivitas Vulkanik</h2>
+      <p class="section-lead">
+        Sebelum erupsi terjadi, magma yang mendesak naik ke permukaan menimbulkan serangkaian perubahan fisik dan kimiawi di lingkungan sekitar:
+      </p>
+
+      <div class="activity-detail-grid">
+        <div class="activity-box glass-panel">
+          <h4>📈 1. Gempa Vulkanik (Seismik)</h4>
+          <p>Pergerakan magma mendesak dan meretakkan batuan padat, menimbulkan getaran tremor harmonik yang terekam oleh seismograf stasiun pengamatan.</p>
+        </div>
+        <div class="activity-box glass-panel">
+          <h4>🌡️ 2. Kenaikan Suhu Kawah & Tanah</h4>
+          <p>Magma yang berada semakin dekat dengan permukaan memanaskan air tanah dan batuan sekitar. Sensor termal mendeteksi lonjakan temperatur fumarol.</p>
+        </div>
+        <div class="activity-box glass-panel">
+          <h4>💨 3. Emisi Gas Vulkanik (SO₂ & CO₂)</h4>
+          <p>Pelepasan gas terlarut dari magma meningkat tajam. Asap putih tipis (solfatara) berubah menjadi kolom asap kelabu pekat bertekanan tinggi.</p>
+        </div>
+        <div class="activity-box glass-panel">
+          <h4>💧 4. Perubahan Kimia & Suhu Air</h4>
+          <p>Mata air di lereng gunung menjadi lebih hangat, keruh, berbau belerang menyengat, atau mengalami penurunan pH menjadi sangat asam.</p>
+        </div>
+        <div class="activity-box glass-panel">
+          <h4>📐 5. Deformasi Tubuh Gunung</h4>
+          <p>Akumulasi magma menyebabkan lereng gunung menggelembung (*inflasi*), yang diukur secara presisi menggunakan tiltmeter dan satelit radar InSAR.</p>
+        </div>
+        <div class="activity-box glass-panel">
+          <h4>🦌 6. Gelisah & Eksodus Satwa Liar</h4>
+          <p>Hewan mamalia dan burung mendeteksi getaran infrasonik dan gas belerang lebih awal, mendorong mereka bermigrasi turun menuju lembah yang lebih aman.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 — Ekosistem Sekitar Gunung (Section AZ) -->
+    <section id="section-ecosystem" class="content-section">
+      <div class="section-number">04</div>
+      <h2 class="section-heading">Ekosistem & Kehidupan di Lereng Gunung Api</h2>
+      <p class="section-lead">
+        Gunung api bukan hanya tentang batu panas dan letusan lahar, melainkan penopang salah satu ekosistem paling subur dan kaya keanekaragaman hayati di bumi:
+      </p>
+
+      <div class="eco-grid">
+        <div class="eco-card glass-panel">
+          <span class="eco-icon">🌳</span>
+          <h3>Hutan Hujan Lereng Tropis</h3>
+          <p>Abu vulkanik kaya unsur hara (kalium, fosfor, magnesium) yang melapuk menjadi tanah andosol super subur penopang flora pegunungan.</p>
+        </div>
+        <div class="eco-card glass-panel">
+          <span class="eco-icon">🦌</span>
+          <h3>Mamalia & Satwa Darat</h3>
+          <p>Rusa jawa, kijang, dan satwa pengerat memanfaatkan vegetasi lereng. Dalam simulasi ini, mereka bereaksi waspada saat status menjadi Warning dan berlari saat Erupsi.</p>
+        </div>
+        <div class="eco-card glass-panel">
+          <span class="eco-icon">🐦</span>
+          <h3>Burung Pegunungan</h3>
+          <p>Elang dan burung pemakan serangga berpatroli di angkasa. Saat terjadi letusan awan abu piroklastik, burung terbang membumbung tinggi menjauhi puncak.</p>
+        </div>
+        <div class="eco-card glass-panel">
+          <span class="eco-icon">💧</span>
+          <h3>Sumber Daya Hidrologis</h3>
+          <p>Struktur berpori gunung api menangkap air hujan dan menyimpannya menjadi cadangan mata air pegunungan yang mengaliri sungai-sungai lembah.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 — Simulasi Erupsi (Section BA & AI) -->
+    <section id="section-simulation" class="content-section">
+      <div class="section-number">05</div>
+      <h2 class="section-heading">Tahapan Dinamika Erupsi</h2>
+      <p class="section-lead">
+        Simulasi ini memodelkan tiga fase dinamis gunung berapi secara visual dan komputasional:
+      </p>
+
+      <div class="timeline-container glass-panel">
+        <div class="timeline-phase">
+          <div class="phase-badge green">FASE 1 — NORMAL</div>
+          <h4>Keseimbangan Alam</h4>
+          <p>Pencahayaan matahari tropis cerah, desau angin lembut, kolom asap solfatara tipis, satwa merumput tenang, dan amplitudo seismograf rendah.</p>
+        </div>
+
+        <div class="timeline-phase">
+          <div class="phase-badge orange">FASE 2 — WARNING (AKTIVITAS MENINGKAT)</div>
+          <h4>Peringatan Dini</h4>
+          <p>Gempa vulkanik meningkat, tubuh gunung bergetar halus, asap menebal kelabu, lava kawah mulai membara lebih terang, dan satwa liar menghentikan aktivitasnya dalam posisi waspada.</p>
+        </div>
+
+        <div class="timeline-phase">
+          <div class="phase-badge red">FASE 3 — ERUPSI PENUH</div>
+          <h4>Letusan Eksplosif</h4>
+          <p>Kolom awan abu membubung tinggi, lava mengalir menuruni alur lereng, lontaran material piroklastik, guncangan kamera (camera shake), serta kawanan rusa dan burung melarikan diri ke area aman.</p>
+        </div>
+      </div>
+
+      <div class="sim-cta-wrap">
+        <a href="#canvas-container" class="btn-primary-action" onclick="triggerEruptionFromSection()">
+          🌋 JALANKAN SIMULASI ERUPSI 3D SEKARANG
+        </a>
+      </div>
+    </section>
+
+    <!-- 06 — Kesimpulan, Mitigasi & Disclaimer (Section BL & BM) -->
+    <section id="section-mitigation" class="content-section">
+      <div class="section-number">06</div>
+      <h2 class="section-heading">Mitigasi Bencana & Tingkat Aktivitas PVMBG</h2>
+      <p class="section-lead">
+        Indonesia memiliki lebih dari 127 gunung api aktif. Pusat Vulkanologi dan Mitigasi Bencana Geologi (PVMBG - Badan Geologi) menetapkan 4 tingkatan status resmi:
+      </p>
+
+      <div class="status-pvmbg-grid">
+        <div class="pvmbg-card level-1">
+          <div class="pvmbg-header">
+            <span>LEVEL I</span>
+            <strong>NORMAL</strong>
+          </div>
+          <p>Aktivitas dasar visual dan seismik tidak memperlihatkan kelainan. Aman untuk wisata dan pendakian sesuai rekomendasi jalur.</p>
+        </div>
+        <div class="pvmbg-card level-2">
+          <div class="pvmbg-header">
+            <span>LEVEL II</span>
+            <strong>WASPADA</strong>
+          </div>
+          <p>Mulai terjadi kenaikan aktivitas di atas normal. Pengunjung dilarang mendekati kawah dalam radius 1.5 - 3 kilometer.</p>
+        </div>
+        <div class="pvmbg-card level-3">
+          <div class="pvmbg-header">
+            <span>LEVEL III</span>
+            <strong>SIAGA</strong>
+          </div>
+          <p>Peningkatan aktivitas seismik dan visual yang jelas. Letusan dapat terjadi. Masyarakat di kawasan rawan bencana bersiap untuk evakuasi terarah.</p>
+        </div>
+        <div class="pvmbg-card level-4">
+          <div class="pvmbg-header">
+            <span>LEVEL IV</span>
+            <strong>AWAS</strong>
+          </div>
+          <p>Letusan utama sedang atau segera berlangsung. Kawasan Rawan Bencana (KRB) harus dikosongkan secara total sesuai radius bahaya yang ditetapkan.</p>
+        </div>
+      </div>
+
+      <!-- Disclaimer Akademik Wajib (Section BM) -->
+      <div class="academic-disclaimer glass-panel">
+        <div class="disclaimer-icon">⚠️</div>
+        <div>
+          <h4>SIMULASI EDUKASI AKADEMIS</h4>
+          <p>
+            Visualisasi 3D ini dibuat murni untuk tujuan pembelajaran akademik dan pemahaman konsep sains geologi, bukan merupakan sistem pemantauan atau prediksi gunung api secara real-time. Status gunung api nyata ditentukan secara ilmiah berdasarkan pemantauan multi-parameter instrumen terintegrasi (seismik, geodesi, geokimia) oleh lembaga resmi pemerintah Republik Indonesia (PVMBG/ESDM).
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================================================
+       BN. FOOTER (Section BN)
+       ============================================================ -->
+  <footer class="app-footer">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <h3>VOLCANO 3D</h3>
+        <p>Interactive Volcano Education & Academic Project</p>
+      </div>
+      <div class="footer-copy">
+        <p>© 2026 — Educational Project</p>
+        <p class="tech-stack">Built with HTML5 • WebGL • Three.js • CSS3</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Script Logika Engine Simulasi -->
+  <script src="script.js"></script>
+</body>
+</html>
